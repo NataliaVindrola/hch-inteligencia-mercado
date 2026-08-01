@@ -12,9 +12,8 @@ Predicción de precios, comparación de insumos sustitutos y monitoreo de oferta
 
 | Predicción | Comparación de insumos |
 |---|---|
-| <img width="1365" height="320" alt="newplot (1)" src="https://github.com/user-attachments/assets/f32da0ca-c99c-47ba-9c3f-de6569551a34" />
- | <img width="1365" height="360" alt="newplot (2)" src="https://github.com/user-attachments/assets/d42ef9dd-fc81-48d9-a874-66367fb4fdda" />
- |
+| <img width="1365" height="320" alt="newplot (1)" src="https://github.com/user-attachments/assets/f32da0ca-c99c-47ba-9c3f-de6569551a34" /> | <img width="1365" height="360" alt="newplot (2)" src="https://github.com/user-attachments/assets/21c24796-117e-4dc0-ac17-abbde7c25c82" />
+|
 
 ## Metodología — ASUM-DM
 
