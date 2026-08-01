@@ -1,0 +1,106 @@
+[2026-08-01 12:43:06] ============================================================
+[2026-08-01 12:43:06] Iniciando actualización diaria
+[2026-08-01 12:43:06] ▶️  Ejecutando actualizacion_diaria.ipynb...
+[2026-08-01 12:43:12] ❌ actualizacion_diaria.ipynb falló:
+[2026-08-01 12:43:12]                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\nbconvert\exporters\exporter.py", line 154, in from_notebook_node
+    nb_copy, resources = self._preprocess(nb_copy, resources)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\nbconvert\exporters\exporter.py", line 353, in _preprocess
+    nbc, resc = preprocessor(nbc, resc)
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\nbconvert\preprocessors\base.py", line 48, in __call__
+    return self.preprocess(nb, resources)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\nbconvert\preprocessors\execute.py", line 97, in preprocess
+    with self.setup_kernel():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\nbclient\client.py", line 596, in setup_kernel
+    self.start_new_kernel(**kwargs)
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\jupyter_core\utils\__init__.py", line 165, in wrapped
+    return loop.run_until_complete(inner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\asyncio\base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\nbclient\client.py", line 546, in async_start_new_kernel
+    await ensure_async(self.km.start_kernel(extra_arguments=self.extra_arguments, **kwargs))
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\jupyter_core\utils\__init__.py", line 198, in ensure_async
+    result = await obj
+             ^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\jupyter_client\manager.py", line 96, in wrapper
+    raise e
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\jupyter_client\manager.py", line 87, in wrapper
+    out = await method(self, *args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\jupyter_client\manager.py", line 435, in _async_start_kernel
+    kernel_cmd, kw = await self._async_pre_start_kernel(**kw)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\jupyter_client\manager.py", line 397, in _async_pre_start_kernel
+    self.kernel_spec,
+    ^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\jupyter_client\manager.py", line 195, in kernel_spec
+    self._kernel_spec = self.kernel_spec_manager.get_kernel_spec(self.kernel_name)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nvind\anaconda3\Lib\site-packages\jupyter_client\kernelspec.py", line 285, in get_kernel_spec
+    raise NoSuchKernel(kernel_name)
+jupyter_client.kernelspec.NoSuchKernel: No such kernel named conda-base-py
+
+[2026-08-01 12:43:12] Se detiene la cadena — el siguiente paso depende de este.
+[2026-08-01 12:43:12] ❌ Actualización incompleta — revisar el log de arriba
+[2026-08-01 12:43:12] ============================================================
+[2026-08-01 12:49:07] ============================================================
+[2026-08-01 12:49:07] Iniciando actualización diaria
+[2026-08-01 12:49:07] ▶️  Ejecutando actualizacion_diaria.ipynb...
+[2026-08-01 12:51:27] ✅ actualizacion_diaria.ipynb completado
+[2026-08-01 12:51:27] ▶️  Ejecutando etl_modelo_dimensional.ipynb...
+[2026-08-01 12:51:38] ❌ etl_modelo_dimensional.ipynb falló:
+[2026-08-01 12:51:39]  params, parse_dates, columns, chunksize, dtype_backend, dtype)[0m
+[0;32m    706[0m [38;5;28;01mwith[39;00m pandasSQL_builder(con) [38;5;28;01mas[39;00m pandas_sql:
+[0;32m    707[0m     [38;5;28;01mif[39;00m [38;5;28misinstance[39m(pandas_sql, SQLiteDatabase):
+[1;32m--> 708[0m         [38;5;28;01mreturn[39;00m pandas_sql[38;5;241m.[39mread_query(
+[0;32m    709[0m             sql,
+[0;32m    710[0m             index_col[38;5;241m=[39mindex_col,
+[0;32m    711[0m             params[38;5;241m=[39mparams,
+[0;32m    712[0m             coerce_float[38;5;241m=[39mcoerce_float,
+[0;32m    713[0m             parse_dates[38;5;241m=[39mparse_dates,
+[0;32m    714[0m             chunksize[38;5;241m=[39mchunksize,
+[0;32m    715[0m             dtype_backend[38;5;241m=[39mdtype_backend,
+[0;32m    716[0m             dtype[38;5;241m=[39mdtype,
+[0;32m    717[0m         )
+[0;32m    719[0m     [38;5;28;01mtry[39;00m:
+[0;32m    720[0m         _is_table_name [38;5;241m=[39m pandas_sql[38;5;241m.[39mhas_table(sql)
+
+File [1;32m~\anaconda3\Lib\site-packages\pandas\io\sql.py:2728[0m, in [0;36mSQLiteDatabase.read_query[1;34m(self, sql, index_col, coerce_float, parse_dates, params, chunksize, dtype, dtype_backend)[0m
+[0;32m   2717[0m [38;5;28;01mdef[39;00m [38;5;21mread_query[39m(
+[0;32m   2718[0m     [38;5;28mself[39m,
+[0;32m   2719[0m     sql,
+[1;32m   (...)[0m
+[0;32m   2726[0m     dtype_backend: DtypeBackend [38;5;241m|[39m Literal[[38;5;124m"[39m[38;5;124mnumpy[39m[38;5;124m"[39m] [38;5;241m=[39m [38;5;124m"[39m[38;5;124mnumpy[39m[38;5;124m"[39m,
+[0;32m   2727[0m ) [38;5;241m-[39m[38;5;241m>[39m DataFrame [38;5;241m|[39m Iterator[DataFrame]:
+[1;32m-> 2728[0m     cursor [38;5;241m=[39m [38;5;28mself[39m[38;5;241m.[39mexecute(sql, params)
+[0;32m   2729[0m     columns [38;5;241m=[39m [col_desc[[38;5;241m0[39m] [38;5;28;01mfor[39;00m col_desc [38;5;129;01min[39;00m cursor[38;5;241m.[39mdescription]
+[0;32m   2731[0m     [38;5;28;01mif[39;00m chunksize [38;5;129;01mis[39;00m [38;5;129;01mnot[39;00m [38;5;28;01mNone[39;00m:
+
+File [1;32m~\anaconda3\Lib\site-packages\pandas\io\sql.py:2676[0m, in [0;36mSQLiteDatabase.execute[1;34m(self, sql, params)[0m
+[0;32m   2673[0m     [38;5;28;01mraise[39;00m ex [38;5;28;01mfrom[39;00m [38;5;21;01minner_exc[39;00m
+[0;32m   2675[0m ex [38;5;241m=[39m DatabaseError([38;5;124mf[39m[38;5;124m"[39m[38;5;124mExecution failed on sql [39m[38;5;124m'[39m[38;5;132;01m{[39;00msql[38;5;132;01m}[39;00m[38;5;124m'[39m[38;5;124m: [39m[38;5;132;01m{[39;00mexc[38;5;132;01m}[39;00m[38;5;124m"[39m)
+[1;32m-> 2676[0m [38;5;28;01mraise[39;00m ex [38;5;28;01mfrom[39;00m [38;5;21;01mexc[39;00m
+
+[1;31mDatabaseError[0m: Execution failed on sql 'SELECT fecha AS fecha_raw, porcinos_cabezas AS valor FROM sacrificio_bovino WHERE porcinos_cabezas IS NOT NULL': no such column: porcinos_cabezas
+
+
+[2026-08-01 12:51:39] Se detiene la cadena — el siguiente paso depende de este.
+[2026-08-01 12:51:39] ❌ Actualización incompleta — revisar el log de arriba
+[2026-08-01 12:51:39] ============================================================
+[2026-08-01 12:59:26] ============================================================
+[2026-08-01 12:59:26] Iniciando actualización diaria
+[2026-08-01 12:59:26] ▶️  Ejecutando actualizacion_diaria.ipynb...
+[2026-08-01 13:00:02] ✅ actualizacion_diaria.ipynb completado
+[2026-08-01 13:00:02] ▶️  Ejecutando etl_modelo_dimensional.ipynb...
+[2026-08-01 13:00:10] ✅ etl_modelo_dimensional.ipynb completado
+[2026-08-01 13:00:10] ✅ Actualización diaria completada — mercado_hch.db al día
+[2026-08-01 13:00:10] ▶️  Subiendo cambios a GitHub...

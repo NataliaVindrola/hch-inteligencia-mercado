@@ -1,0 +1,144 @@
+
+<style>
+  .section { margin-bottom: 16px; }
+  .section-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); letter-spacing: 0.04em; margin-bottom: 8px; text-transform: uppercase; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+  .card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 12px 14px; }
+  .card.accent-teal   { border-left: 3px solid #1D9E75; border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0; }
+  .card.accent-purple { border-left: 3px solid #534AB7; border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0; }
+  .card.accent-amber  { border-left: 3px solid #BA7517; border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0; }
+  .card.accent-coral  { border-left: 3px solid #D85A30; border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0; }
+  .card.accent-blue   { border-left: 3px solid #378ADD; border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0; }
+  .card-title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+  .card-sub   { font-size: 11px; color: var(--color-text-secondary); line-height: 1.5; }
+  .card-source { font-size: 10px; color: var(--color-text-secondary); margin-top: 6px; font-family: var(--font-mono); }
+  .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 500; }
+  .b-teal   { background: #E1F5EE; color: #085041; }
+  .b-purple { background: #EEEDFE; color: #26215C; }
+  .b-amber  { background: #FAEEDA; color: #854F0B; }
+  .b-coral  { background: #FAECE7; color: #993C1D; }
+  .b-blue   { background: #E6F1FB; color: #0C447C; }
+  .b-gray   { background: #F1EFE8; color: #444441; }
+  .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 14px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); margin-bottom: 14px; font-size: 12px; color: var(--color-text-secondary); }
+  .flow-node { background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 4px 10px; font-size: 11px; color: var(--color-text-primary); white-space: nowrap; }
+  .flow-arr { color: var(--color-text-secondary); }
+  .audience { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .aud-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+  .aud-title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 6px; }
+  .aud-item { font-size: 11px; color: var(--color-text-secondary); padding: 2px 0; display: flex; align-items: flex-start; gap: 5px; }
+  .aud-item::before { content: '→'; color: var(--color-text-secondary); flex-shrink: 0; }
+  @media (prefers-color-scheme: dark) {
+    .b-teal   { background: #04342C; color: #9FE1CB; }
+    .b-purple { background: #26215C; color: #CECBF6; }
+    .b-amber  { background: #412402; color: #FAC775; }
+    .b-coral  { background: #4A1B0C; color: #F5C4B3; }
+    .b-blue   { background: #042C53; color: #B5D4F4; }
+    .b-gray   { background: #2C2C2A; color: #D3D1C7; }
+  }
+</style>
+
+<h2 class="sr-only">Dashboard de inteligencia comercial para vendedores de harina de carne y hueso</h2>
+
+<div class="section-label">Arquitectura del producto</div>
+<div class="flow">
+  <div class="flow-node">Scrapers automáticos</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-node">Base de datos</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-node">Dashboard visual</div>
+  <div class="flow-arr">→</div>
+  <div class="flow-node">Comercial junior / senior</div>
+</div>
+
+<div class="section-label">A quién le habla cada módulo</div>
+<div class="audience">
+  <div class="aud-card">
+    <div class="aud-title">Comercial junior</div>
+    <div class="aud-item">¿Cómo está el dólar hoy vs el mes pasado?</div>
+    <div class="aud-item">¿Subió o bajó la soya esta semana?</div>
+    <div class="aud-item">¿Cuánto cuesta el fosfato vs nuestra HCH?</div>
+    <div class="aud-item">¿Qué argumento uso para justificar precio?</div>
+  </div>
+  <div class="aud-card">
+    <div class="aud-title">Comercial senior</div>
+    <div class="aud-item">Tendencia de precio últimos 12 meses</div>
+    <div class="aud-item">¿Qué segmento está creciendo más: mascotas vs monogástricos?</div>
+    <div class="aud-item">¿Colombia importa más o menos que el año pasado?</div>
+    <div class="aud-item">¿Hay presión de precio por sustitutos?</div>
+  </div>
+</div>
+
+<div class="section-label">Módulo 1 — Variables macroeconómicas</div>
+<div class="card-grid section">
+  <div class="card accent-teal">
+    <div class="card-title">Dólar TRM</div>
+    <div class="card-sub">Valor diario y promedio del mes. Alerta si supera umbral definido.</div>
+    <div class="card-source">Banco de la República</div>
+  </div>
+  <div class="card accent-teal">
+    <div class="card-title">Soya Chicago (ZM=F)</div>
+    <div class="card-sub">Precio internacional USD/ton. Marca el piso del mercado de sustitutos.</div>
+    <div class="card-source">CBOT vía yfinance</div>
+  </div>
+  <div class="card accent-teal">
+    <div class="card-title">Soya nacional</div>
+    <div class="card-sub">Precio importación Colombia. Diferencial vs Chicago = margen de intermediación.</div>
+    <div class="card-source">DIAN partida 1208.10</div>
+  </div>
+</div>
+
+<div class="section-label">Módulo 2 — Bienes sustitutos</div>
+<div class="card-grid section">
+  <div class="card accent-purple">
+    <div class="card-title">HCH — precio importación</div>
+    <div class="card-sub">Tu producto. Precio CIF USD/ton calculado de declaraciones DIAN.</div>
+    <div class="card-source">DIAN partida 2301.10</div>
+  </div>
+  <div class="card accent-purple">
+    <div class="card-title">Harina de pescado</div>
+    <div class="card-sub">Competidor directo. Mismo uso proteico en alimentación animal.</div>
+    <div class="card-source">DIAN partida 2301.20</div>
+  </div>
+  <div class="card accent-purple">
+    <div class="card-title">Fosfato dicálcico</div>
+    <div class="card-sub">Sustituto mineral. Compite en el componente de calcio y fósforo.</div>
+    <div class="card-source">DIAN partida 2835.26</div>
+  </div>
+</div>
+
+<div class="section-label">Módulo 3 — Demanda por segmento</div>
+<div class="card-grid section">
+  <div class="card accent-amber">
+    <div class="card-title">Alimento para mascotas</div>
+    <div class="card-sub">Importaciones de pet food como proxy de demanda del segmento. Segmento de mayor crecimiento en LATAM.</div>
+    <div class="card-source">DIAN partida 2309.10</div>
+  </div>
+  <div class="card accent-amber">
+    <div class="card-title">Monogástricos — aves</div>
+    <div class="card-sub">Producción avícola nacional. Mayor producción = mayor demanda de HCH.</div>
+    <div class="card-source">FENAVI — cifras trimestrales</div>
+  </div>
+  <div class="card accent-amber">
+    <div class="card-title">Monogástricos — cerdos</div>
+    <div class="card-sub">Inventario porcino nacional. Correlaciona con consumo de proteína animal en dietas.</div>
+    <div class="card-source">Porkcolombia</div>
+  </div>
+</div>
+
+<div class="section-label">Módulo 4 — Oferta doméstica</div>
+<div class="card-grid section">
+  <div class="card accent-coral">
+    <div class="card-title">Sacrificio bovino</div>
+    <div class="card-sub">Mayor sacrificio → más subproductos → menos necesidad de importar → presión bajista en precio.</div>
+    <div class="card-source">FEDEGAN semestral</div>
+  </div>
+  <div class="card accent-coral">
+    <div class="card-title">Inventario bovino</div>
+    <div class="card-sub">Tendencia del hato ganadero. Indica si la oferta de subproductos crecerá o se contraerá.</div>
+    <div class="card-source">FEDEGAN semestral</div>
+  </div>
+</div>
+
+<div style="padding:10px 14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary);margin-top:4px;">
+  Tecnología recomendada para el dashboard: <strong style="color:var(--color-text-primary);">Streamlit</strong> — Python puro, se despliega fácil, gráficos con Plotly, y el equipo comercial solo necesita un link para verlo desde el celular o el computador.
+</div>
