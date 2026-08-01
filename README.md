@@ -2,7 +2,7 @@
 
 Predicción de precios, comparación de insumos sustitutos y monitoreo de oferta/demanda para el mercado colombiano de Harina de Carne y Hueso (HCH), un insumo proteico clave en la formulación de alimento balanceado para animales.
 
-> 🔗 **Demo en vivo:** _(se agrega aquí el link de Streamlit Cloud una vez desplegado)_
+> 🔗 **Demo en vivo:** [hch-inteligencia-mercado.streamlit.app](https://hch-inteligencia-mercado.streamlit.app)
 
 ## Pregunta de negocio
 
