@@ -76,7 +76,8 @@ streamlit run app.py
 ```bash
 python actualizar_diario.py
 ```
-
+> **Nota:** el sacrificio bovino (DANE ESAG) no se actualiza automáticamente — el DANE publica esta serie trimestralmente. Revisar cada ~3 meses en [dane.gov.co — ESAG históricos](https://www.dane.gov.co/index.php/estadisticas-por-tema/agropecuario/encuesta-de-sacrificio-de-ganado/encuesta-de-sacrificio-de-ganado-esag-historicos), descargar el archivo `series-hist-ESAG-*.xls` más reciente y actualizar `RUTA_ESAG` en `actualizacion_diaria.ipynb`.
+> 
 Corre en orden `actualizacion_diaria.ipynb` → `etl_modelo_dimensional.ipynb`, y sube los cambios a GitHub automáticamente. Pensado para automatizarse con Task Scheduler (Windows) o cron (Linux/Mac).
 
 ## Autora
