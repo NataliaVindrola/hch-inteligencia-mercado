@@ -236,28 +236,31 @@ def cargar_tendencia(_mtime):
     con = sqlite3.connect(DB_PATH)
 
     df_hch = pd.read_sql("""
-        SELECT f.anio, f.mes, AVG(h.precio_cop_ton)/1000 AS precio_hch_cop_kg
+        SELECT f.fecha, AVG(h.precio_cop_ton)/1000 AS precio_hch_cop_kg
         FROM HechosPrecioInsumo h
-        JOIN DimFecha f ON h.id_fecha = f.id_fecha
-        JOIN DimInsumo i ON h.id_insumo = i.id_insumo
-        JOIN DimFuente fu ON h.id_fuente = fu.id_fuente
+        JOIN DimFecha   f  ON h.id_fecha  = f.id_fecha
+        JOIN DimInsumo  i  ON h.id_insumo = i.id_insumo
+        JOIN DimFuente  fu ON h.id_fuente = fu.id_fuente
         WHERE i.codigo_insumo = 'HCH' AND fu.nombre_fuente = 'BMC'
-        GROUP BY f.anio, f.mes
+        GROUP BY f.fecha
     """, con)
 
     df_ind = pd.read_sql("""
-        SELECT f.anio, f.mes, di.codigo_indicador, AVG(h.valor) AS valor
+        SELECT f.fecha, di.codigo_indicador, AVG(h.valor) AS valor
         FROM HechosIndicadorMacro h
-        JOIN DimFecha f ON h.id_fecha = f.id_fecha
+        JOIN DimFecha     f  ON h.id_fecha     = f.id_fecha
         JOIN DimIndicador di ON h.id_indicador = di.id_indicador
         WHERE di.codigo_indicador IN ('trm', 'cme_soya', 'cme_maiz')
-        GROUP BY f.anio, f.mes, di.codigo_indicador
+        GROUP BY f.fecha, di.codigo_indicador
     """, con)
     con.close()
 
-    df_ind_pivot = df_ind.pivot(index=["anio", "mes"], columns="codigo_indicador", values="valor").reset_index()
-    df = df_hch.merge(df_ind_pivot, on=["anio", "mes"], how="inner")
-    df["fecha"] = pd.to_datetime(dict(year=df["anio"], month=df["mes"], day=1))
+    df_ind_pivot = df_ind.pivot(index="fecha", columns="codigo_indicador", values="valor").reset_index()
+    # outer: cada serie conserva su propia historia — HCH no se publica todos
+    # los días calendario (solo días con rueda BMC), TRM/CME sí son diarios;
+    # con "inner" se recortaban las fechas al mínimo común y se perdía rango.
+    df = df_hch.merge(df_ind_pivot, on="fecha", how="outer")
+    df["fecha"] = pd.to_datetime(df["fecha"])
     df = df.sort_values("fecha").reset_index(drop=True)
     return df
 
@@ -269,9 +272,18 @@ def pagina_prediccion():
     st.title("Precio de HCH — próximos meses")
     st.caption(f"Actualizado con el boletín BMC más reciente · datos al {df_clean['anio_mes'].iloc[-1]}")
 
+    MESES_ES = {1:"ene",2:"feb",3:"mar",4:"abr",5:"may",6:"jun",7:"jul",
+                8:"ago",9:"sep",10:"oct",11:"nov",12:"dic"}
+    def fmt_mes(fecha):
+        return f"{MESES_ES[fecha.month]} {fecha.year}"
+
     precio_actual = df_clean[TARGET].iloc[-1]
+    fecha_actual_legible = fmt_mes(df_clean["fecha"].iloc[-1])
+
     precio_3m = df_forecast["pred"].iloc[:3].mean()
     delta_3m_pct = (precio_3m - precio_actual) / precio_actual * 100
+    rango_3m_ini = fmt_mes(df_forecast["fecha"].iloc[0])
+    rango_3m_fin = fmt_mes(df_forecast["fecha"].iloc[2])
 
     if delta_3m_pct > 2:
         st.warning(f"📈 **Se espera un alza de ~{delta_3m_pct:.1f}% en los próximos 3 meses.** "
@@ -283,11 +295,16 @@ def pagina_prediccion():
         st.success("➡️ **El precio se espera estable en los próximos 3 meses.** Sin señal fuerte de compra/espera.")
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Precio actual", f"{precio_actual*1000:,.0f} COP/kg" if precio_actual < 100 else f"{precio_actual:,.0f} COP/kg")
-    col2.metric("Esperado en 3 meses", f"{precio_3m:,.0f} COP/kg", f"{delta_3m_pct:+.1f}%")
-    col3.metric("Rango probable (90%)", f"{df_forecast['ic_low'].iloc[:3].min():,.0f}–{df_forecast['ic_high'].iloc[:3].max():,.0f}")
+    col1.metric(f"Precio actual ({fecha_actual_legible})",
+                f"{precio_actual*1000:,.0f} COP/kg" if precio_actual < 100 else f"{precio_actual:,.0f} COP/kg")
+    col2.metric(f"Promedio próximos 3 meses ({rango_3m_ini}–{rango_3m_fin})",
+                f"{precio_3m:,.0f} COP/kg", f"{delta_3m_pct:+.1f}%")
+    col3.metric(f"Rango probable 90% ({rango_3m_ini}–{rango_3m_fin})",
+                f"{df_forecast['ic_low'].iloc[:3].min():,.0f}–{df_forecast['ic_high'].iloc[:3].max():,.0f}")
     confianza = "Alta" if metricas["mape"] < 6 else ("Media" if metricas["mape"] < 10 else "Baja")
     col4.metric("Confianza del pronóstico", confianza, f"MAPE {metricas['mape']:.1f}%")
+    st.caption("El rango probable es la envolvente de los intervalos de confianza individuales "
+               "de cada uno de los 3 meses (no el precio de un solo mes puntual).")
 
     st.markdown("##### Evolución esperada (próximos 18 meses)")
     fig = go.Figure()
@@ -320,27 +337,11 @@ def pagina_prediccion():
         st.dataframe(df_forecast_mostrar)
 
 
-@st.cache_data(show_spinner="Cargando TRM diario...")
-def cargar_trm_diario(_mtime):
-    con = sqlite3.connect(DB_PATH)
-    df = pd.read_sql("""
-        SELECT f.fecha, h.valor AS trm
-        FROM HechosIndicadorMacro h
-        JOIN DimFecha f ON h.id_fecha = f.id_fecha
-        JOIN DimIndicador di ON h.id_indicador = di.id_indicador
-        WHERE di.codigo_indicador = 'trm'
-        ORDER BY f.fecha
-    """, con)
-    con.close()
-    df["fecha"] = pd.to_datetime(df["fecha"])
-    return df
-
-
 def pagina_tendencia():
     df = cargar_tendencia(_db_mtime())
 
     st.title("Medidas macro (TRM, CME)")
-    st.caption("Análisis 1.a / 1.b — evolución de HCH junto a TRM y commodities Chicago")
+    st.caption("Análisis 1.a / 1.b — evolución diaria de HCH junto a TRM y commodities Chicago")
 
     fecha_min, fecha_max = df["fecha"].min().date(), df["fecha"].max().date()
     rango = st.date_input("Rango de fechas", value=(fecha_min, fecha_max),
@@ -352,7 +353,7 @@ def pagina_tendencia():
     df_f = df[(df["fecha"].dt.date >= rango[0]) & (df["fecha"].dt.date <= rango[1])].reset_index(drop=True)
 
     if len(df_f) < 2:
-        st.warning("Selecciona un rango con al menos 2 meses.")
+        st.warning("Selecciona un rango con al menos 2 días con dato.")
         return
 
     series_disponibles = {
@@ -368,59 +369,49 @@ def pagina_tendencia():
         return
     series = {k: series_disponibles[k] for k in seleccionadas}
 
+    # Cada indicador puede tener su propio último día con dato (p.ej. HCH solo
+    # publica en días de rueda BMC, TRM/CME son de lunes a viernes) — el
+    # cálculo de "actual" y su fecha se hace por serie, no sobre la fila final
+    # del dataframe combinado.
     cols = st.columns(len(series))
     for col, (label, (campo, unidad, _)) in zip(cols, series.items()):
-        actual = df_f[campo].iloc[-1]
-        inicial = df_f[campo].iloc[0]
+        serie_valida = df_f[["fecha", campo]].dropna()
+        if len(serie_valida) < 2:
+            col.metric(label, "Sin datos en el rango")
+            continue
+        actual = serie_valida[campo].iloc[-1]
+        fecha_actual = serie_valida["fecha"].iloc[-1]
+        inicial = serie_valida[campo].iloc[0]
         delta = (actual - inicial) / inicial * 100
-        col.metric(label, f"{actual:,.0f} {unidad}", f"{delta:+.1f}%")
+        col.metric(f"{label} — {fecha_actual.strftime('%d %b %Y')}", f"{actual:,.0f} {unidad}", f"{delta:+.1f}%")
 
-    st.markdown(f"##### Evolución indexada (base 100 = {rango[0].strftime('%b %Y')})")
+    st.markdown(f"##### Evolución indexada diaria (base 100 = {rango[0].strftime('%d %b %Y')})")
     fig = go.Figure()
     for label, (campo, unidad, color) in series.items():
-        base = df_f[campo].iloc[0]
-        indice = (df_f[campo] / base * 100).round(1)
+        serie_valida = df_f[["fecha", campo]].dropna()
+        if serie_valida.empty:
+            continue
+        base = serie_valida[campo].iloc[0]
+        indice = (serie_valida[campo] / base * 100).round(1)
         fig.add_trace(go.Scatter(
-            x=df_f["fecha"], y=indice, name=label, line=dict(color=color, width=2),
-            customdata=df_f[campo],
-            hovertemplate=f"%{{x|%b %Y}}<br>{label}: %{{customdata:,.0f}} {unidad}  (índice %{{y}})<extra></extra>",
+            x=serie_valida["fecha"], y=indice, name=label, line=dict(color=color, width=1.5),
+            customdata=serie_valida[campo],
+            hovertemplate=f"%{{x|%d %b %Y}}<br>{label}: %{{customdata:,.0f}} {unidad}  (índice %{{y}})<extra></extra>",
         ))
     fig.update_layout(height=340, margin=dict(l=10, r=10, t=10, b=10),
                        yaxis_title="Índice", legend=dict(orientation="h", y=1.12))
     st.plotly_chart(fig, width="stretch")
-    st.caption("Pasa el mouse sobre la línea para ver el valor real de cada mes.")
+    st.caption("Pasa el mouse sobre la línea para ver el valor real de cada día. "
+               "El HCH solo tiene dato en días con rueda BMC; TRM y CME son días hábiles.")
 
     st.markdown("##### Tabla de valores reales (sin indexar)")
     df_tabla = df_f[["fecha"]].copy()
     for label, (campo, unidad, _) in series.items():
         df_tabla[f"{label}"] = df_f[campo].round(1)
-        df_tabla[f"{label} — var. mensual %"] = (df_f[campo].pct_change() * 100).round(2)
-    df_tabla = df_tabla.rename(columns={"fecha": "Mes"})
-    df_tabla["Mes"] = df_tabla["Mes"].dt.strftime("%Y-%m")
-    st.dataframe(df_tabla.sort_values("Mes", ascending=False), width="stretch", hide_index=True)
-
-    st.markdown("##### TRM diario")
-    df_trm_d = cargar_trm_diario(_db_mtime())
-    if not df_trm_d.empty:
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Mínimo", f"{df_trm_d['trm'].min():,.0f}")
-        c2.metric("Máximo", f"{df_trm_d['trm'].max():,.0f}")
-        c3.metric("Promedio", f"{df_trm_d['trm'].mean():,.0f}")
-        c4.metric("Último dato", f"{df_trm_d['trm'].iloc[-1]:,.0f}")
-
-        fig_trm = go.Figure()
-        fig_trm.add_trace(go.Scatter(
-            x=df_trm_d["fecha"], y=df_trm_d["trm"], line=dict(color="#378ADD", width=1.2),
-            hovertemplate="%{x|%d %b %Y}<br>%{y:,.0f} COP/USD<extra></extra>",
-        ))
-        fig_trm.update_layout(
-            title=dict(text=f"Tendencia TRM (COP/USD) — {df_trm_d['fecha'].dt.year.min()}-{df_trm_d['fecha'].dt.year.max()}", font=dict(size=14)),
-            height=340, margin=dict(l=10, r=10, t=40, b=10),
-            xaxis_title="Fecha", yaxis_title="COP/USD",
-        )
-        st.plotly_chart(fig_trm, width="stretch")
-    else:
-        st.info("Aún no hay datos diarios de TRM cargados.")
+        df_tabla[f"{label} — var. diaria %"] = (df_f[campo].pct_change() * 100).round(2)
+    df_tabla = df_tabla.rename(columns={"fecha": "Fecha"})
+    df_tabla["Fecha"] = df_tabla["Fecha"].dt.strftime("%Y-%m-%d")
+    st.dataframe(df_tabla.sort_values("Fecha", ascending=False), width="stretch", hide_index=True)
 
 
 @st.cache_data(show_spinner="Cargando precios de sustitutos...")
@@ -429,16 +420,16 @@ def cargar_sustitutos(_mtime):
     productos = SUSTITUTOS + ["HCH"]
     placeholders = ",".join("?" * len(productos))
     df = pd.read_sql(f"""
-        SELECT f.anio, f.mes, i.codigo_insumo AS producto, AVG(h.precio_cop_ton)/1000 AS precio_cop_kg
+        SELECT f.fecha, i.codigo_insumo AS producto, AVG(h.precio_cop_ton)/1000 AS precio_cop_kg
         FROM HechosPrecioInsumo h
         JOIN DimFecha f ON h.id_fecha = f.id_fecha
         JOIN DimInsumo i ON h.id_insumo = i.id_insumo
         JOIN DimFuente fu ON h.id_fuente = fu.id_fuente
         WHERE i.codigo_insumo IN ({placeholders}) AND fu.nombre_fuente = 'BMC'
-        GROUP BY f.anio, f.mes, i.codigo_insumo
+        GROUP BY f.fecha, i.codigo_insumo
     """, con, params=productos)
     con.close()
-    df["fecha"] = pd.to_datetime(dict(year=df["anio"], month=df["mes"], day=1))
+    df["fecha"] = pd.to_datetime(df["fecha"])
     return df
 
 
@@ -459,7 +450,7 @@ def pagina_sustitutos():
     df = cargar_sustitutos(_db_mtime())
 
     st.title("Precios de sustitutos en el tiempo")
-    st.caption("Apoya análisis 2.a / 2.b — precio mensual promedio BMC, COP/kg")
+    st.caption("Apoya análisis 2.a / 2.b — precio diario BMC (por rueda), COP/kg")
 
     if df.empty:
         st.info("Aún no hay precios de sustitutos cargados en HechosPrecioInsumo.")
@@ -476,18 +467,23 @@ def pagina_sustitutos():
         return
 
     fig = go.Figure()
+    fechas_ultimas = []
     for i, s in enumerate(elegidos):
         d = df[df["producto"] == s].sort_values("fecha")
+        if d.empty:
+            continue
         es_hch = s == "HCH"
+        nombre = NOMBRES_SUSTITUTOS.get(s, s)
         fig.add_trace(go.Scatter(
-            x=d["fecha"], y=d["precio_cop_kg"], name=NOMBRES_SUSTITUTOS.get(s, s),
-            line=dict(color=COLORES_SUSTITUTOS[i % len(COLORES_SUSTITUTOS)], width=3 if es_hch else 1.5,
-                      dash="solid" if es_hch else "solid"),
-            hovertemplate="%{x|%b %Y}<br>%{y:,.0f} COP/kg<extra></extra>",
+            x=d["fecha"], y=d["precio_cop_kg"], name=nombre,
+            line=dict(color=COLORES_SUSTITUTOS[i % len(COLORES_SUSTITUTOS)], width=3 if es_hch else 1.5),
+            hovertemplate=f"%{{x|%d %b %Y}}<br>{nombre}: %{{y:,.0f}} COP/kg<extra></extra>",
         ))
+        fechas_ultimas.append(f"{nombre}: {d['fecha'].iloc[-1].strftime('%d %b %Y')}")
     fig.update_layout(height=360, margin=dict(l=10, r=10, t=10, b=10),
                        yaxis_title="COP/kg", legend=dict(orientation="h", y=1.12))
     st.plotly_chart(fig, width="stretch")
+    st.caption("Último dato por insumo — " + " · ".join(fechas_ultimas))
 
 
 @st.cache_data(show_spinner="Cargando oferta y demanda...")
@@ -528,61 +524,76 @@ def pagina_oferta_demanda():
     df = cargar_oferta_demanda(_db_mtime())
 
     st.title("Oferta y demanda")
-    st.caption("Contexto de mercado para 2.b y 3.b — oferta = sacrificio bovino (DANE-ESAG); "
-               "demanda = consumo de concentrado terminado (BMC)")
+    st.caption("Contexto de mercado para 2.b y 3.b — oferta = sacrificio bovino (DANE-ESAG, actualización "
+               "trimestral/manual); demanda = consumo de concentrado terminado (BMC, mensual)")
 
-    if df.empty or "sacrificio_bovino" not in df.columns:
-        st.info("Aún no hay suficientes datos de oferta/demanda cargados.")
+    if df.empty:
+        st.info("Aún no hay datos de oferta/demanda cargados.")
         return
 
-    df_v = df.dropna(subset=["sacrificio_bovino", "demanda_mascotas", "demanda_monogastricos"])
-    if len(df_v) < 2:
-        st.info("Se necesitan al menos 2 meses con dato completo para comparar tendencia.")
-        return
-
-    series = {
+    series_def = {
         "Oferta (sacrificio bovino)": ("sacrificio_bovino", "cab./mes", "#378ADD"),
         "Demanda mascotas": ("demanda_mascotas", "ton/mes", "#D4537E"),
         "Demanda monogástricos": ("demanda_monogastricos", "ton/mes", "#EF9F27"),
     }
 
-    cols = st.columns(3)
-    for col, (label, (campo, unidad, _)) in zip(cols, series.items()):
-        col.metric(label, f"{df_v[campo].iloc[-1]:,.0f} {unidad}")
+    # Cada serie se evalúa por separado: si el sacrificio bovino no tiene
+    # dato reciente (o directamente no existe), simplemente no se dibuja —
+    # no se recorta la demanda de mascotas/monogástricos para "esperarlo".
+    series = {label: campo_info for label, campo_info in series_def.items()
+              if campo_info[0] in df.columns and df[campo_info[0]].notna().sum() >= 2}
 
-    st.markdown(f"##### Evolución indexada (base 100 = {df_v['fecha'].iloc[0].strftime('%b %Y')})")
+    if not series:
+        st.info("Se necesitan al menos 2 meses con dato en alguna de las series.")
+        return
+
+    faltantes = [label for label in series_def if label not in series]
+    if faltantes:
+        st.caption(f"⚠️ Sin datos suficientes todavía: {', '.join(faltantes)} — se omiten del gráfico.")
+
+    cols = st.columns(len(series))
+    for col, (label, (campo, unidad, _)) in zip(cols, series.items()):
+        serie_valida = df[["fecha", campo]].dropna()
+        ultimo = serie_valida[campo].iloc[-1]
+        fecha_ultimo = serie_valida["fecha"].iloc[-1]
+        col.metric(f"{label} — {fecha_ultimo.strftime('%b %Y')}", f"{ultimo:,.0f} {unidad}")
+
+    st.markdown("##### Evolución indexada (base 100 = primer mes disponible de cada serie)")
     fig = go.Figure()
     for label, (campo, unidad, color) in series.items():
-        base = df_v[campo].iloc[0]
-        indice = (df_v[campo] / base * 100).round(1) if base else df_v[campo] * 0
+        serie_valida = df[["fecha", campo]].dropna().sort_values("fecha")
+        base = serie_valida[campo].iloc[0]
+        indice = (serie_valida[campo] / base * 100).round(1) if base else serie_valida[campo] * 0
         fig.add_trace(go.Scatter(
-            x=df_v["fecha"], y=indice, name=label, line=dict(color=color, width=2),
-            customdata=df_v[campo],
+            x=serie_valida["fecha"], y=indice, name=label, line=dict(color=color, width=2),
+            customdata=serie_valida[campo],
             hovertemplate=f"%{{x|%b %Y}}<br>{label}: %{{customdata:,.0f}} {unidad}  (índice %{{y}})<extra></extra>",
         ))
     fig.update_layout(height=340, margin=dict(l=10, r=10, t=10, b=10),
                        yaxis_title="Índice", legend=dict(orientation="h", y=1.12))
     st.plotly_chart(fig, width="stretch")
-    st.caption("Oferta y demanda en índice base 100 para poder compararlas en la misma escala, "
-               "aunque una esté en cabezas y otra en toneladas. Ventana limitada a los meses donde "
-               "existen las 3 series (desde sep-2022, cuando arranca la demanda de concentrados BMC).")
+    st.caption("Cada serie llega hasta su propio último dato disponible. Si el sacrificio bovino "
+               "(actualización manual/trimestral) queda rezagado frente a la demanda de concentrados "
+               "(mensual vía BMC), su línea simplemente termina antes — las demás siguen hasta donde "
+               "efectivamente hay dato.")
 
-    with st.expander("Ver oferta con su historia completa (desde 2008)"):
-        df_of_completo = df.dropna(subset=["sacrificio_bovino"]).sort_values("fecha")
-        base_larga = df_of_completo["sacrificio_bovino"].iloc[0]
-        indice_largo = (df_of_completo["sacrificio_bovino"] / base_larga * 100).round(1)
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(
-            x=df_of_completo["fecha"], y=indice_largo, line=dict(color="#378ADD", width=1.5),
-            customdata=df_of_completo["sacrificio_bovino"],
-            hovertemplate="%{x|%b %Y}<br>%{customdata:,.0f} cab./mes  (índice %{y})<extra></extra>",
-        ))
-        fig2.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="Índice",
-                            title=dict(text=f"Oferta (sacrificio bovino) — base 100 = {df_of_completo['fecha'].iloc[0].strftime('%b %Y')}", font=dict(size=13)))
-        st.plotly_chart(fig2, width="stretch")
-        st.caption("Aquí sí se ve la tendencia estructural decreciente de largo plazo y la estacionalidad "
-                   "(feb=mínimo, dic=máximo) documentadas en Fase 1 — la ventana comparativa de arriba la "
-                   "comprime al limitarse a los últimos ~3.7 años.")
+    if "sacrificio_bovino" in df.columns and df["sacrificio_bovino"].notna().sum() >= 2:
+        with st.expander("Ver oferta con su historia completa (desde 2008)"):
+            df_of_completo = df.dropna(subset=["sacrificio_bovino"]).sort_values("fecha")
+            base_larga = df_of_completo["sacrificio_bovino"].iloc[0]
+            indice_largo = (df_of_completo["sacrificio_bovino"] / base_larga * 100).round(1)
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(
+                x=df_of_completo["fecha"], y=indice_largo, line=dict(color="#378ADD", width=1.5),
+                customdata=df_of_completo["sacrificio_bovino"],
+                hovertemplate="%{x|%b %Y}<br>%{customdata:,.0f} cab./mes  (índice %{y})<extra></extra>",
+            ))
+            fig2.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="Índice",
+                                title=dict(text=f"Oferta (sacrificio bovino) — base 100 = {df_of_completo['fecha'].iloc[0].strftime('%b %Y')}", font=dict(size=13)))
+            st.plotly_chart(fig2, width="stretch")
+            st.caption("Aquí sí se ve la tendencia estructural decreciente de largo plazo y la estacionalidad "
+                       "(feb=mínimo, dic=máximo) documentadas en Fase 1 — la ventana comparativa de arriba la "
+                       "comprime al limitarse a los últimos ~3.7 años.")
 
 
 # ============================================================
