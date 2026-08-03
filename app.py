@@ -43,7 +43,7 @@ FEATURES = [
 
 SUSTITUTOS = ["torta_soya_importada", "harina_visceras", "harina_pluma_sangre",
               "harina_sangre", "harina_hueso", "sebo_res", "subproductos_carnicos",
-              "fosfato_monodicalcico"]
+              "fosfato"]
 
 # Traducción de variables técnicas a frases de negocio (ver mockup)
 DRIVER_FRASES = {
@@ -443,7 +443,7 @@ NOMBRES_SUSTITUTOS = {
     "harina_hueso": "Harina de hueso",
     "sebo_res": "Sebo de res",
     "subproductos_carnicos": "Subproductos cárnicos",
-    "fosfato_monodicalcico": "Fosfato monodicálcico",
+    "fosfato": "Fosfato (monodicálcico, BMC)",
 }
 COLORES_SUSTITUTOS = ["#D85A30", "#1D9E75", "#D4537E", "#378ADD", "#EF9F27",
                        "#7F77DD", "#888780", "#B57A1D", "#4FB8A6"]
