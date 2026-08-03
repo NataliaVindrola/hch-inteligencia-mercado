@@ -531,6 +531,20 @@ def pagina_oferta_demanda():
         st.info("Aún no hay datos de oferta/demanda cargados.")
         return
 
+    # Slider de rango por mes (los datos son mensuales, tiene más sentido
+    # deslizar entre meses que elegir dos fechas exactas de un calendario).
+    df["anio_mes"] = df["fecha"].dt.strftime("%Y-%m")
+    meses_disponibles = sorted(df["anio_mes"].unique())
+    mes_ini, mes_fin = st.select_slider(
+        "Rango de meses", options=meses_disponibles,
+        value=(meses_disponibles[0], meses_disponibles[-1]),
+    )
+    df = df[(df["anio_mes"] >= mes_ini) & (df["anio_mes"] <= mes_fin)].reset_index(drop=True)
+
+    if df.empty:
+        st.info("No hay datos en el rango seleccionado.")
+        return
+
     series_def = {
         "Oferta (sacrificio bovino)": ("sacrificio_bovino", "cab./mes", "#378ADD"),
         "Demanda mascotas": ("demanda_mascotas", "ton/mes", "#D4537E"),
@@ -538,18 +552,18 @@ def pagina_oferta_demanda():
     }
 
     # Cada serie se evalúa por separado: si el sacrificio bovino no tiene
-    # dato reciente (o directamente no existe), simplemente no se dibuja —
-    # no se recorta la demanda de mascotas/monogástricos para "esperarlo".
+    # dato reciente (o directamente no existe) dentro del rango elegido,
+    # simplemente no se dibuja — no se recorta la demanda para "esperarlo".
     series = {label: campo_info for label, campo_info in series_def.items()
               if campo_info[0] in df.columns and df[campo_info[0]].notna().sum() >= 2}
 
     if not series:
-        st.info("Se necesitan al menos 2 meses con dato en alguna de las series.")
+        st.info("Se necesitan al menos 2 meses con dato en alguna de las series, dentro del rango elegido.")
         return
 
     faltantes = [label for label in series_def if label not in series]
     if faltantes:
-        st.caption(f"⚠️ Sin datos suficientes todavía: {', '.join(faltantes)} — se omiten del gráfico.")
+        st.caption(f"⚠️ Sin datos suficientes en este rango: {', '.join(faltantes)} — se omiten del gráfico.")
 
     cols = st.columns(len(series))
     for col, (label, (campo, unidad, _)) in zip(cols, series.items()):
@@ -558,7 +572,7 @@ def pagina_oferta_demanda():
         fecha_ultimo = serie_valida["fecha"].iloc[-1]
         col.metric(f"{label} — {fecha_ultimo.strftime('%b %Y')}", f"{ultimo:,.0f} {unidad}")
 
-    st.markdown("##### Evolución indexada (base 100 = primer mes disponible de cada serie)")
+    st.markdown(f"##### Evolución indexada (base 100 = primer mes disponible de cada serie, dentro de {mes_ini} a {mes_fin})")
     fig = go.Figure()
     for label, (campo, unidad, color) in series.items():
         serie_valida = df[["fecha", campo]].dropna().sort_values("fecha")
@@ -572,14 +586,15 @@ def pagina_oferta_demanda():
     fig.update_layout(height=340, margin=dict(l=10, r=10, t=10, b=10),
                        yaxis_title="Índice", legend=dict(orientation="h", y=1.12))
     st.plotly_chart(fig, width="stretch")
-    st.caption("Cada serie llega hasta su propio último dato disponible. Si el sacrificio bovino "
-               "(actualización manual/trimestral) queda rezagado frente a la demanda de concentrados "
-               "(mensual vía BMC), su línea simplemente termina antes — las demás siguen hasta donde "
-               "efectivamente hay dato.")
+    st.caption("Cada serie llega hasta su propio último dato disponible dentro del rango elegido. Si el "
+               "sacrificio bovino (actualización manual/trimestral) queda rezagado frente a la demanda de "
+               "concentrados (mensual vía BMC), su línea simplemente termina antes — las demás siguen hasta "
+               "donde efectivamente hay dato.")
 
     if "sacrificio_bovino" in df.columns and df["sacrificio_bovino"].notna().sum() >= 2:
-        with st.expander("Ver oferta con su historia completa (desde 2008)"):
-            df_of_completo = df.dropna(subset=["sacrificio_bovino"]).sort_values("fecha")
+        with st.expander("Ver oferta con su historia completa (desde 2008, ignora el slider de arriba)"):
+            df_completo = cargar_oferta_demanda(_db_mtime())
+            df_of_completo = df_completo.dropna(subset=["sacrificio_bovino"]).sort_values("fecha")
             base_larga = df_of_completo["sacrificio_bovino"].iloc[0]
             indice_largo = (df_of_completo["sacrificio_bovino"] / base_larga * 100).round(1)
             fig2 = go.Figure()
@@ -592,8 +607,8 @@ def pagina_oferta_demanda():
                                 title=dict(text=f"Oferta (sacrificio bovino) — base 100 = {df_of_completo['fecha'].iloc[0].strftime('%b %Y')}", font=dict(size=13)))
             st.plotly_chart(fig2, width="stretch")
             st.caption("Aquí sí se ve la tendencia estructural decreciente de largo plazo y la estacionalidad "
-                       "(feb=mínimo, dic=máximo) documentadas en Fase 1 — la ventana comparativa de arriba la "
-                       "comprime al limitarse a los últimos ~3.7 años.")
+                       "(feb=mínimo, dic=máximo) documentadas en Fase 1 — se muestra siempre completa, sin "
+                       "aplicar el filtro de meses de arriba.")
 
 
 # ============================================================
